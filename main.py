@@ -3,6 +3,7 @@
 import getopt
 import sys
 
+
 from numpy import zeros, diag, diagflat, dot
 
 
