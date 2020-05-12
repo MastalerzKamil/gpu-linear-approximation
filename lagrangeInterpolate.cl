@@ -1,8 +1,7 @@
-
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-__kernel void interpolate(__global float *dataX,  __global float *dataY, __global int *size, __global float *x,  __global float *result){
-    float sum = 0, temp;
+__kernel void interpolate(__global const double *dataX,  __global const double *dataY, __global int *size, __global double *x,  __global double *result){
+    double sum = 0, temp;
     int n = *size;
     for (int i = 0; i < n; ++i) {
         temp = 1;

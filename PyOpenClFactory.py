@@ -9,10 +9,9 @@ import matplotlib.pyplot as plt
 
 class Lagrange:
     def __init__(self, x_data, y_data, result_size):
-        self.result_size = result_size
         self.data_size = np.array([len(x_data)])
-        self.x_vector = np.array(x_data).astype(np.float32)
-        self.y_vector = np.array(y_data).astype(np.float32)
+        self.x_vector = np.array(x_data).astype(np.double)
+        self.y_vector = np.array(y_data).astype(np.double)
         self.delta_x = self.calculate_delta_x()
         self.start_value = self.get_first_x_vector_element()
         self.last_value = self.get_last_x_vector_element()
@@ -32,7 +31,7 @@ class Lagrange:
 
         for x in np.arange(self.start_value, self.last_value, self.delta_x):
             result_x_host_data.append(x)
-            result_y_temp = np.array([0.0])
+            result_y_temp = np.array([1.0])
 
             cl_instance = CL()
             cl_instance.popCorn(self.x_vector, self.y_vector, self.data_size, x, result_y_temp)
@@ -72,7 +71,7 @@ class CL:
 
 
 if __name__ == "__main__":
-    x_sample = [1, 2, 3, 4, 5, 6]
-    y_sample = [1, 4, 9, 16, 25, 36]
+    x_sample = [0, 1, 2, 3, 4, 5, 6]
+    y_sample = [0, 1, 4, 9, 16, 25, 36]
     example = Lagrange(x_sample, y_sample, 12)
     example.execute("lagrangeInterpolate.cl")
