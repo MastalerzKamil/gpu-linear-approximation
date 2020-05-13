@@ -39,22 +39,24 @@ class Lagrange:
                                             cl_instance.y_vector_buf, cl_instance.data_size_buf, cl_instance.x_buf,
                                             cl_instance.dest_buf)
             cl.enqueue_copy(cl_instance.queue, result_y_temp, cl_instance.dest_buf).wait()
-            print(x, result_y_temp[0])
+            del cl_instance
             self.result_y_host_data.append(result_y_temp[0])
 
-        print("\na", self.x_vector)
-        print("b", self.y_vector)
+    def show_results(self):
+        print("\nx input", self.x_vector)
+        print("y input", self.y_vector)
         print("result: ", self.result_y_host_data)
         plt.plot(self.result_x_host_data, self.result_y_host_data, self.x_vector, self.y_vector)
         plt.show()
 
-    def write_to_file(self,filename):
+    def write_to_file(self, filename):
         n = len(self.result_x_host_data)
         result_matrix = []
 
         for i in range(n):
             result_matrix.append([self.result_x_host_data[i], self.result_y_host_data[i]])
         result_matrix = np.array(result_matrix)
+        print("interpolated")
         print(result_matrix)
         np.savetxt(filename, result_matrix)
 
@@ -63,7 +65,8 @@ if __name__ == "__main__":
     x_sample = [0, 1, 2, 3, 4, 5, 6]
     y_sample = [0, 1, 4, 9, 16, 25, 36]
     file_data = FileReader()
-    file_data.read_from_file("dane_test.txt")
+    file_data.read_from_file("dane_test3.txt")
     example = Lagrange(file_data.get_x_vector(), file_data.get_y_vector())
     example.execute("lagrangeInterpolate.cl")
+    example.show_results()
     example.write_to_file("result.txt")

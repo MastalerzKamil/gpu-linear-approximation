@@ -25,3 +25,6 @@ class PyOpenClFactory:
         self.data_size_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=data_size)
         self.x_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=x)
         self.dest_buf = cl.Buffer(self.ctx, mf.WRITE_ONLY, host_dest.nbytes)
+
+    def __del__(self):
+        self.queue.finish()
