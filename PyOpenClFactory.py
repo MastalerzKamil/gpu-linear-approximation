@@ -6,6 +6,8 @@ import pyopencl as cl
 import numpy as np
 import matplotlib.pyplot as plt
 
+from FileReader import FileReader
+
 
 class Lagrange:
     def __init__(self, x_data, y_data):
@@ -82,6 +84,8 @@ class CL:
 if __name__ == "__main__":
     x_sample = [0, 1, 2, 3, 4, 5, 6]
     y_sample = [0, 1, 4, 9, 16, 25, 36]
-    example = Lagrange(x_sample, y_sample)
+    file_data = FileReader()
+    file_data.read_from_file("dane_test.txt")
+    example = Lagrange(file_data.get_x_vector(), file_data.get_y_vector())
     example.execute("lagrangeInterpolate.cl")
     example.write_to_file("result.txt")
