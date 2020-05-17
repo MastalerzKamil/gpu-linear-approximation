@@ -5,6 +5,7 @@ __kernel void interpolate(__global const double *dataX,  __global const double *
     int n = *size;
     for (int i = 0; i < n; ++i) {
         temp = 1;
+	printf("%f", dataX[j])
         for (int j = 0; j < n; ++j) {
             if (i != j) {
                 temp *= (x[get_global_id(0)] - dataX[j]) / (dataX[i] - dataX[j]);

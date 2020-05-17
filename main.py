@@ -8,12 +8,24 @@ from numpy import zeros, diag, diagflat, dot
 import pyopencl as cl
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 
 class PyOpenClFactory:
     def __init__(self):
-        self.ctx = cl.create_some_context()
+        platforms = cl.get_platforms()  # Select the first platform [0]
+        if not platforms:
+            raise EnvironmentError('No openCL platform (or driver) available.')
+
+        devices = platforms[0].get_devices()
+        self.ctx = cl.Context([devices[0]])
         self.queue = cl.CommandQueue(self.ctx)
+
+    """
+        self.ctx = cl.Context(
+            dev_type=cl.device_type.ALL,
+            properties=[(cl.context_properties.PLATFORM, platforms[0])])
+    """
 
     def loadProgram(self, filename):
         f = open(filename, 'r')
@@ -96,14 +108,14 @@ class Lagrange:
 
     def write_to_file(self, filename):
         n = len(self.result_x_host_data)
-        result_matrix = []
+        connected_result = []
 
         for i in range(n):
-            result_matrix.append([self.result_x_host_data[i], self.result_y_host_data[i]])
-        result_matrix = np.array(result_matrix)
-        print("interpolated")
-        print(result_matrix)
-        np.savetxt(filename, result_matrix)
+            connected_result.append([self.result_x_host_data[i], self.result_y_host_data[i]])
+        result_matrix = np.array(connected_result)
+        # print("interpolated")
+        # print(result_matrix)
+        np.savetxt(filename, result_matrix,)
 
 
 def main(argv):
@@ -131,7 +143,11 @@ def main(argv):
     file_data = FileReader()
     file_data.read_from_file(inputfile)
     example = Lagrange(file_data.x_vector, file_data.y_vector)
+    time_start = time.time()
+    print("executing Lagrange")
     example.execute("lagrangeInterpolate.cl")
+    time_end = time.time()
+    print("--- %s seconds ---" % (time_end - time_start))
     example.write_to_file(outputfile)
 
 
