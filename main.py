@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import getopt
+import os
 import sys
 
 from numpy import zeros, diag, diagflat, dot
@@ -13,12 +14,7 @@ import time
 
 class PyOpenClFactory:
     def __init__(self):
-        platforms = cl.get_platforms()  # Select the first platform [0]
-        if not platforms:
-            raise EnvironmentError('No openCL platform (or driver) available.')
-
-        devices = platforms[0].get_devices()
-        self.ctx = cl.Context([devices[0]])
+        self.ctx = cl.create_some_context()
         self.queue = cl.CommandQueue(self.ctx)
 
     """
@@ -121,23 +117,44 @@ class Lagrange:
 def main(argv):
     inputfile = ''
     outputfile = ''
+    env_device = '0'
     try:
-        opts, args = getopt.getopt(argv, "hi:o:", ["input=", "output="])
+        opts, args = getopt.getopt(argv, "hi:o:d:", ["input=", "output=","device="])
     except getopt.GetoptError:
         print("Welcome in function approximation program")
-        print("Parameters: \n-i --input <input file> \n-o --output <output file>")
+        print("Parameters: \n"
+              "-i --input <input file> \n"
+              "-o --output <output file> \n"
+              "-d --device <device value>\n"
+              "0 - intel\n"
+              "1- CUDA")
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
             print("Welcome in function approximation program")
-            print("Parameters: \n-i --input <input file> \n-o --output <output file>")
+            print("Parameters: \n"
+                  "-i --input <input file> \n"
+                  "-o --output <output file> \n"
+                  "-d --device <device value>\n"
+                  "0 - intel\n"
+                  "1- CUDA")
             sys.exit()
         elif opt in ("-i", "--input"):
             inputfile = arg
         elif opt in ("-o", "--output"):
             outputfile = arg
+        elif opt in ("-d", "--device"):
+            env_device = arg
+
+    os.environ["PYOPENCL_CTX"]=env_device
+
     print('Input file is ', inputfile)
     print('Output file is ', outputfile)
+    device= {
+            '0': "Intel",
+            '1': "CUDA"
+            }
+    print(device.get(env_device,"Invalid device"))
     x_sample = [0, 1, 2, 3, 4, 5, 6]
     y_sample = [0, 1, 4, 9, 16, 25, 36]
     file_data = FileReader()
