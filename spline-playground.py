@@ -29,19 +29,11 @@ def cubic_interp1d(x0, x, y):
     x = np.asfarray(x)
     y = np.asfarray(y)
 
-    # remove non finite values
-    # indexes = np.isfinite(x)
-    # x = x[indexes]
-    # y = y[indexes]
-
     # check if sorted
-    # assumption: sorted
-    """
-        if np.any(np.diff(x) < 0):
-            indexes = np.argsort(x)
-            x = x[indexes]
-            y = y[indexes]
-    """
+    if np.any(np.diff(x) < 0):
+        indexes = np.argsort(x)
+        x = x[indexes]
+        y = y[indexes]
     size = len(x)
 
     xdiff = np.diff(x).astype(np.double)
@@ -60,13 +52,12 @@ def cubic_interp1d(x0, x, y):
 
     Bi = np.zeros((1)).astype(np.double)
 
-    # creating device buffers
+
     for i in range(1, size-1, 1):
         Li_1[i] = xdiff[i-1] / Li[i-1]
         Li[i] = sqrt(2*(xdiff[i-1]+xdiff[i]) - Li_1[i-1] * Li_1[i-1])
         Bi[0] = 6*(ydiff[i]/xdiff[i] - ydiff[i-1]/xdiff[i-1])
         z[i] = (Bi - Li_1[i-1]*z[i-1])/Li[i]
-    print(Li)
     i = size - 1
     Li_1[i-1] = xdiff[-1] / Li[i-1]
     Li[i] = sqrt(2*xdiff[-1] - Li_1[i-1] * Li_1[i-1])
@@ -86,12 +77,11 @@ def cubic_interp1d(x0, x, y):
     xi1, xi0 = x[index], x[index-1]
     yi1, yi0 = y[index], y[index-1]
     zi1, zi0 = z[index], z[index-1]
-    hi1 = xi1 - xi0
+    hi1 = xi1 - xi0  # TODO parallelize
 
     ctx = cl.create_some_context()
     mf = cl.mem_flags
     queue = cl.CommandQueue(ctx)
-    size_array = np.array([size]).astype(np.double)
 
     zi0_buff = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=zi0)
     hi1_buff = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=hi1)
@@ -108,13 +98,7 @@ def cubic_interp1d(x0, x, y):
                             zi1_buff, yi0_buff, res_buf)
 
     # calculate cubic
-    """
-    f0 = zi0/(6*hi1)*(xi1-x0)**3 + \
-         zi1/(6*hi1)*(x0-xi0)**3 + \
-         (yi1/hi1 - zi1*hi1/6)*(x0-xi0) + \
-         (yi0/hi1 - zi0*hi1/6)*(xi1-x0)
-    """
-    f0 = np.empty(len(x)).astype(np.double)
+    f0 = np.empty(len(x0)).astype(np.double)
     cl.enqueue_copy(queue, f0, res_buf).wait()
     return f0
 
@@ -127,6 +111,6 @@ if __name__ == '__main__':
     plt.scatter(x, y)
 
     x_new = np.linspace(0, 10, 201)
-    # plt.plot(x_new, cubic_interp1d(x_new, x, y))
+    plt.plot(x_new, cubic_interp1d(x_new, x, y))
     print(x_new, cubic_interp1d(x_new,x, y))
     # plt.show()
