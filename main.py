@@ -71,6 +71,13 @@ class FileReader:
         # print(result_matrix)
         np.savetxt(filename, result_matrix)
 
+    def save_plot(self, input_x, input_y, interpolated_x, interpolated_y, filename):
+        plt.plot(input_x, input_y, '-b', label='input')
+        plt.plot(interpolated_x, interpolated_y, '--r', label='interpolated')
+        plt.ylabel("y")
+        plt.xlabel("x")
+        plt.savefig(filename)
+
 
 class Lagrange:
     def __init__(self, x_data, y_data):
@@ -233,6 +240,52 @@ class CubicSplines:
         cl.enqueue_copy(cl_cubic_splines_instance.queue, self.result_y, res_buf).wait()
 
 
+class CalculationsMethodsFactory:
+    def __init__(self, methods, input_file, output):
+        self.methods = methods
+        self.output_filename = output
+        self.input_filename = input_file
+        self.load_data()
+
+    def load_data(self):
+        self.file_data = FileReader()
+        self.file_data.read_from_file(self.input_filename)
+
+    def execute(self):
+        if not self.methods:
+            print("no methods choosen. Executing all of them")
+            self.execute_lagrange()
+            self.execute_splines()
+            return
+
+        for i in self.methods:
+            if i == "lagrange":
+                self.execute_lagrange()
+            elif i == "spline":
+                self.execute_splines()
+
+    def execute_lagrange(self):
+        lagrange = Lagrange(self.file_data.x_vector, self.file_data.y_vector)
+        time_start = time.time()
+        print("executing Lagrange")
+        lagrange.execute("lagrangeInterpolate.cl")
+        time_end = time.time()
+        print("--- %s seconds ---" % (time_end - time_start))
+        lagrange.write_to_file(self.output_filename)
+        self.file_data.write_to_file(lagrange.result_x_host_data, lagrange.result_y_host_data, self.output_filename)
+
+    def execute_splines(self):
+        spline = CubicSplines(self.file_data.x_vector, self.file_data.y_vector)
+        time_start = time.time()
+        print("executing Splines")
+        spline.calculate_cubic("cubic-splines-kernel.cl")
+        time_end = time.time()
+        print("--- %s seconds ---" % (time_end - time_start))
+        self.file_data.write_to_file(spline.new_x, spline.result_y, self.output_filename + ".txt")
+        self.file_data.save_plot(self.file_data.x_vector, self.file_data.y_vector, spline.new_x, spline.result_y,
+                            self.output_filename + ".png")
+
+
 def main(argv):
     inputfile = ''
     outputfile = ''
@@ -278,30 +331,9 @@ def main(argv):
             '0': "Intel",
             '1': "CUDA"
             }
-    print(device.get(env_device,"Invalid device"))
-    x_sample = [0, 1, 2, 3, 4, 5, 6]
-    y_sample = [0, 1, 4, 9, 16, 25, 36]
-    file_data = FileReader()
-    file_data.read_from_file(inputfile)
-
-    example_spline = CubicSplines(file_data.x_vector, file_data.y_vector)
-    time_start = time.time()
-    print("executing Splines")
-    example_spline.calculate_cubic("cubic-splines-kernel.cl")
-    time_end = time.time()
-    print("--- %s seconds ---" % (time_end - time_start))
-    file_data.write_to_file(example_spline.new_x, example_spline.result_y, outputfile)
-
-"""
-    example = Lagrange(file_data.x_vector, file_data.y_vector)
-    time_start = time.time()
-    print("executing Lagrange")
-    example.execute("lagrangeInterpolate.cl")
-    time_end = time.time()
-    print("--- %s seconds ---" % (time_end - time_start))
-    example.write_to_file(outputfile)
-    file_data.write_to_file(example.result_x_host_data, example.result_y_host_data, outputfile)
-"""
+    print(device.get(env_device, "Invalid device"))
+    calculations = CalculationsMethodsFactory(method, inputfile, outputfile)
+    calculations.execute()
 
 
 if __name__ == "__main__":
