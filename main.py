@@ -103,7 +103,6 @@ class Lagrange:
         for x in np.arange(self.start_value, self.last_value, self.delta_x):
             self.result_x_host_data.append(x)
             result_y_temp = np.array([1.0])
-
             cl_instance = PyOpenClFactory()
             cl_instance.allocate_buff_lagrange(self.x_vector, self.y_vector, self.data_size, x, result_y_temp)
             cl_instance.loadProgram(program_filename)
@@ -149,12 +148,6 @@ class CubicSplines:
     def calculate_cubic(self, program_filename):
         """
         Interpolate a 1-D function using cubic splines.
-          x0 : a float or an 1d-array
-          x : (N,) array_like
-              A 1-D array of real/complex values.
-          y : (N,) array_like
-              A 1-D array of real values. The length of y along the
-              interpolation axis must be equal to the length of x.
 
         Implement a trick to generate at first step the cholesky matrice L of
         the tridiagonal matrice A (thus L is a bidiagonal matrice that
@@ -214,10 +207,20 @@ class CubicSplines:
         xi1, xi0 = self.x_vector[index], self.x_vector[index - 1]
         yi1, yi0 = self.y_vector[index], self.y_vector[index - 1]
         zi1, zi0 = z[index], z[index - 1]
-        hi1 = xi1 - xi0  # TODO parallelize
+
+        # hi1 = xi1 - xi0  operation
+        cl_hi1_instance = PyOpenClFactory()
+        mf = cl.mem_flags
+        xi0_buff = cl.Buffer(cl_hi1_instance.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=xi0)
+        xi1_buff = cl.Buffer(cl_hi1_instance.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=xi1)
+        hi1_buff = cl.Buffer(cl_hi1_instance.ctx, mf.WRITE_ONLY, xi0.nbytes)
+        cl_hi1_instance.loadProgram(program_filename)
+        cl_hi1_instance.program.generate_hi1(cl_hi1_instance.queue, np.array(xi1).shape, None,
+                                             xi1_buff, xi0_buff, hi1_buff)
+        hi1 = np.empty(len(self.new_x)).astype(np.double)
+        cl.enqueue_copy(cl_hi1_instance.queue, hi1, hi1_buff)
 
         cl_cubic_splines_instance = PyOpenClFactory()
-        mf = cl.mem_flags
 
         # allocating buffers for cubic calculations
         zi0_buff = cl.Buffer(cl_cubic_splines_instance.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=zi0)
@@ -261,7 +264,7 @@ class CalculationsMethodsFactory:
         for i in self.methods:
             if i == "lagrange":
                 self.execute_lagrange()
-            elif i == "spline":
+            elif i == "splines":
                 self.execute_splines()
 
     def execute_lagrange(self):
@@ -273,6 +276,9 @@ class CalculationsMethodsFactory:
         print("--- %s seconds ---" % (time_end - time_start))
         lagrange.write_to_file(self.output_filename)
         self.file_data.write_to_file(lagrange.result_x_host_data, lagrange.result_y_host_data, self.output_filename)
+        self.file_data.write_to_file(lagrange.x_vector, lagrange.y_vector, self.output_filename + ".txt")
+        self.file_data.save_plot(self.file_data.x_vector, self.file_data.y_vector, lagrange.x_vector, lagrange.y_vector,
+                                 self.output_filename + "-lagrange.png")
 
     def execute_splines(self):
         spline = CubicSplines(self.file_data.x_vector, self.file_data.y_vector)
@@ -283,7 +289,7 @@ class CalculationsMethodsFactory:
         print("--- %s seconds ---" % (time_end - time_start))
         self.file_data.write_to_file(spline.new_x, spline.result_y, self.output_filename + ".txt")
         self.file_data.save_plot(self.file_data.x_vector, self.file_data.y_vector, spline.new_x, spline.result_y,
-                            self.output_filename + ".png")
+                            self.output_filename + "-splines.png")
 
 
 def main(argv):
@@ -324,6 +330,7 @@ def main(argv):
             method.append("lagrange")
 
     os.environ["PYOPENCL_CTX"] = env_device
+    os.environ["PYOPENCL_COMPILER_OUTPUT"] = '1'
 
     print('Input file is ', inputfile)
     print('Output file is ', outputfile)

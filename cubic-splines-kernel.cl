@@ -1,34 +1,10 @@
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-/*
-__kernel void diagonals_loop(__global const double* Li_1, __global double* Li, const unsigned int size, __global const double* xdiff,
-				      __global const double* ydiff, __global double* z,
-                      __global double* res_Li_1, __global double* res_Li, __global double* Bi, __global double* res_z)
+__kernel void generate_hi1(__global const double* xi1, __global const double* xi0, __global double* res_hi1)
 {
-    int n = size;
     int gid = get_global_id(0);
-    
-    if(gid<n-1 && gid>0)
-    {
-        printf("gid: %d \t n: %d\t Li_1[gid]: $lf\tLi[gid]: %lf\tBi[0]: %lf\tz[gid]: %lf\n",gid, size, Li_1[gid], Li[gid], Bi[0],z[gid]);
-        Li_1[gid] = xdiff[gid-1] / Li[gid-1];
-        printf(" calculated Li_1[gid]\n");
-        Li[gid] = sqrt(2*(xdiff[gid-1]+xdiff[gid]) - Li_1[gid-1] * Li_1[gid-1]);
-        printf(" calculated Li[gid]\n");
-        Bi[0] = 6*(ydiff[gid]/xdiff[gid] - ydiff[gid-1]/xdiff[gid-1]); // Single value
-        printf(" calculated Bi\n");
-        z[gid] = (Bi[0] - Li_1[gid-1]*z[gid-1])/Li[gid];
-        printf(" calculated z[gid]\n");
-    }
-    for(int i=1; i<n;i++)
-    {
-        res_Li_1[gid] = xdiff[i-1] / Li[i-1];
-        res_Li[gid] = sqrt(2*(xdiff[i-1]+xdiff[i]) - Li_1[i-1] * Li_1[i-1]);
-        res_Bi[0] = 6*(ydiff[i]/xdiff[i] - ydiff[i-1]/xdiff[i-1]); // Single value
-        res_z[gid] = (Bi[0] - Li_1[i-1]*z[i-1])/Li[i];
-    }
+    res_hi1[gid]=xi1[gid]-xi0[gid];
 }
-*/
 
 __kernel void calculate_cubic(__global const double* zi0, __global const double* hi1,
 __global const double* xi1, __global const double* x0, __global const double* xi0,
