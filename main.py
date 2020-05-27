@@ -72,10 +72,11 @@ class FileReader:
         np.savetxt(filename, result_matrix)
 
     def save_plot(self, input_x, input_y, interpolated_x, interpolated_y, filename):
-        plt.plot(input_x, input_y, '-b', label='input')
+        plt.plot(input_x, input_y, 'o', label='input')
         plt.plot(interpolated_x, interpolated_y, '--r', label='interpolated')
         plt.ylabel("y")
         plt.xlabel("x")
+        leg = plt.legend()
         plt.savefig(filename)
 
 
@@ -257,14 +258,20 @@ class CalculationsMethodsFactory:
     def execute(self):
         if not self.methods:
             print("no methods choosen. Executing all of them")
+            plt.figure(0)
+            plt.title("Lagrange interpolation for dataset "+self.input_filename)
             self.execute_lagrange()
+            plt.figure(1)
+            plt.title("Splines interpolation for dataset " + self.input_filename)
             self.execute_splines()
             return
-
+        plt.figure(0)
         for i in self.methods:
             if i == "lagrange":
+                plt.title("Lagrange interpolation for dataset " + self.input_filename)
                 self.execute_lagrange()
             elif i == "splines":
+                plt.title("Splines interpolation for dataset " + self.input_filename)
                 self.execute_splines()
 
     def execute_lagrange(self):
@@ -275,8 +282,8 @@ class CalculationsMethodsFactory:
         time_end = time.time()
         print("--- %s seconds ---" % (time_end - time_start))
         lagrange.write_to_file(self.output_filename)
-        self.file_data.write_to_file(lagrange.result_x_host_data, lagrange.result_y_host_data, self.output_filename)
-        self.file_data.write_to_file(lagrange.x_vector, lagrange.y_vector, self.output_filename + ".txt")
+        self.file_data.write_to_file(lagrange.result_x_host_data, lagrange.result_y_host_data,
+                                     self.output_filename+".txt")
         self.file_data.save_plot(self.file_data.x_vector, self.file_data.y_vector, lagrange.x_vector, lagrange.y_vector,
                                  self.output_filename + "-lagrange.png")
 
